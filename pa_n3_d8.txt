@@ -1,2 +1,0 @@
-n=3, d=8 -> 1 permutations
-1 2 3 
