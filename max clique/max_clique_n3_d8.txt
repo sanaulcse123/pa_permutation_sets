@@ -1,0 +1,2 @@
+Max Clique Size: 0
+No valid clique found.
