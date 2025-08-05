@@ -2,71 +2,115 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_N 12
-#define MAX_PA 5000000
+#define MAX_N 18
+#define MAX_PA 362880  // 9! = 362880
 
 int pa[MAX_PA][MAX_N];
-int prev_row[MAX_PA][MAX_N + 1];  // Store previous row for each PA
-int curr_row[MAX_PA][MAX_N + 1];  // For temporary computation
-int pa_count = 0;
+int dp[MAX_PA][MAX_N][MAX_N];
+int perm_count = 0, pa_count = 0;
+int n, d;
+int pi[MAX_N];
 
-// Return max of two ints
-int max(int a, int b) { return (a > b) ? a : b; }
-
-// ----- Constant-time prefix pruning using 2-row LCS -----
-int is_valid_prefix(int *prefix, int l, int n, int d) {
-    for (int i = 0; i < pa_count; i++) {
-    curr_row[i][0] = 0; // base case for LCS
-
-    for (int j = 1; j <= n; j++) {
-        if (prefix[l-1] == pa[i][j-1])
-            curr_row[i][j] = prev_row[i][j-1] + 1;
-        else
-            curr_row[i][j] = (prev_row[i][j] > curr_row[i][j-1])
-                            ? prev_row[i][j]
-                            : curr_row[i][j-1];
+void print_perm( int *perm,int m) {
+    for (int i = 0; i < m; i++) {
+        printf("%d ", perm[i]);
     }
-    int lcs = curr_row[i][n];
-    int lev = 2 * (n - lcs);
-    if (lev < d) return 0;
+    printf("\n");
 }
 
+int lcs(int *a,int m, int ib) {    
+    //a is new perm and 
+    // a[m] is a new symbol in a
+    // ib is index in pa[]
+    for (int i = 0; i <= n; i++) dp[ib][i][0];
+     for(int j=0; j<=m; j++){
+       dp[ib][0][j] = 0;
+       for (int i = 1; i <= n; i++) {
+        if (a[j] == pa[ib][i-1])
+          dp[ib][i][j+1] = dp[ib][i-1][j] + 1;
+        else
+          dp[ib][i][j+1] = (dp[ib][i-1][j+1] > dp[ib][i][j]) ? dp[ib][i-1][j+1] : dp[ib][i][j];  
+       }
+    }
+ /*
+    print_perm(a,m+1);
+    print_perm(pa[ib],n);
+    printf("lcs=%d m=%d \n", dp[ib][n][m+1],m);
+    exit(0);
+    */
+    return dp[ib][n][m+1];
+}
+
+int lcs_update(int *a,int m, int ib) {    
+    //a is new perm and 
+    // a[m] is a new symbol in a
+    // ib is index in pa[]
+    if( m==0 )
+       for (int i = 0; i <= n; i++) dp[ib][i][0];
+    dp[ib][0][m+1] = 0;
+    for (int i = 1; i <= n; i++) {
+        if (a[m] == pa[ib][i-1])
+          dp[ib][i][m+1] = dp[ib][i-1][m] + 1;
+        else
+          dp[ib][i][m+1] = (dp[ib][i-1][m+1] > dp[ib][i][m]) ? dp[ib][i-1][m+1] : dp[ib][i][m];  
+    }
+
+   
+   // print_perm(a,m+1);
+    //print_perm(pa[ib],n);
+    //printf("lcs=%d m=%d \n", dp[ib][n][m+1],m);
+   // exit(0);
+    
+    return dp[ib][n][m+1];
+}
+// Levenshtein distance using theorem
+int lev_distance(int *a,int m, int ib) {
+    return 2 * (n - lcs_update(a, m, ib));
+}
+
+// Check if permutation is valid to add to PA
+int is_valid( int m) {
+    for (int i = 0; i < pa_count; i++) {
+        if (lev_distance(pi ,m, i) < d)
+            return 0;
+    }
     return 1;
 }
 
-// ----- Swap helper -----
-void swap(int *a, int *b) { int t = *a; *a = *b; *b = t; }
+// Swap helper
+void swap(int *a, int *b) {
+    int t = *a; *a = *b; *b = t;
+}
 
-// ----- Recursive Greedy permutation generator -----
-void generate_permutations(int *arr, int l, int r, int n, int d) {
-    if (l > 0 && !is_valid_prefix(arr, l, n, d)) return;
-
-    if (l == r) {
-        if (pa_count >= MAX_PA) {
-            printf("Max PA limit reached (%d), aborting.\n", MAX_PA);
-            exit(1);
-        }
-        memcpy(pa[pa_count], arr, n * sizeof(int));
-        // Store current row for future prefix extensions
-        memcpy(prev_row[pa_count], curr_row[pa_count], (n + 1) * sizeof(int));
+// Generate all permutations of [1..n]
+void generate_permutations( int l, int r) {
+    if (l == r && is_valid(l)) {
+        memcpy(pa[pa_count], pi, n * sizeof(int));
+        lcs(pi,n,pa_count);
         pa_count++;
-        return;
+        printf("New perm ");
+        print_perm(pi,n);
+        return; 
     }
     for (int i = l; i <= r; i++) {
-        swap(&arr[l], &arr[i]);
-        generate_permutations(arr, l + 1, r, n, d);
-        swap(&arr[l], &arr[i]);
+        swap(&pi[l], &pi[i]);
+        if (is_valid(l))
+            generate_permutations(l + 1, r);
+        swap(&pi[l], &pi[i]);
     }
 }
 
-// ----- Main -----
 int main() {
-    int n = 10, d = 12; // Change as needed for your experiment
-    int base[MAX_N];
-    for (int i = 0; i < n; i++) base[i] = i;
-
-    generate_permutations(base, 0, n - 1, n, d);
-
-    printf("n=%d, d=%d -> %d permutations (PA lower bound)\n", n, d, pa_count);
+    
+    // Example: n=11, d=10 (as in your table for L(11,10))
+    for (n = 13; n <= 13; n++) {
+        for (d = 16; d <= 16; d++) {
+            pa_count = 0;
+            for (int i = 0; i < n; i++) pi[i] = i + 1;
+            generate_permutations(0, n - 1);
+            printf("n=%d, d=%d -> %d permutations\n", n, d, pa_count);
+        }
+    }
     return 0;
 }
+
