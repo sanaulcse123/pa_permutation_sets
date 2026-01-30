@@ -1,0 +1,16 @@
+compile(general):
+
+g++ -O2 -std=c++17 pa_ball_repeat_add2.cpp -o pa_ball_repeat_add2
+
+
+
+run (for 11,3): 
+
+./pa_ball_repeat_add2 11 3 11_3_pa.txt --max-trials 5000 --seed 1
+
+
+
+run for any n,d: 
+
+./pa_ball_repeat_add2  n  d  pa_file   [--max-trials T]  [--seed S]
+
